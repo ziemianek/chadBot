@@ -1,0 +1,10 @@
+[tools]
+go = "latest"
+
+[tasks.build]
+description = "Build application"
+run = """
+go build -o build/chadbot ./cmd/chadbot
+chmod +x ./build/chadbot
+"""
+
