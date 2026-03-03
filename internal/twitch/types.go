@@ -1,4 +1,4 @@
-package internal
+package twitch
 
 type Session struct {
 	Id                  string `json:"id"`

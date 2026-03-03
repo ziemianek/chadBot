@@ -1,4 +1,4 @@
-package internal
+package twitch
 
 import (
 	"encoding/json"

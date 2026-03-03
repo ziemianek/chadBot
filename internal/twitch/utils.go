@@ -1,4 +1,4 @@
-package internal
+package twitch
 
 import (
 	"bytes"

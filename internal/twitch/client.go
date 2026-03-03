@@ -1,4 +1,4 @@
-package internal
+package twitch
 
 import (
 	"github.com/gorilla/websocket"
