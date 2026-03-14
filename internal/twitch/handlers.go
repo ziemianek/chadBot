@@ -18,7 +18,7 @@ func (m *WelcomeMessage) Handle(msg []byte) error {
 func (m *NotificationMessage) Handle(msg []byte) error {
 	var err error
 	err = json.Unmarshal(msg, m)
-	log.Info(m.Payload.Event.Message.Text)
+	// log.Info(m.Payload.Event.Message.Text)
 	return err
 }
 
