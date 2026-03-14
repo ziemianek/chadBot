@@ -5,43 +5,34 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-type MsgHandler interface {
-	Handle(msg []byte) error
-}
-
-func Handle(h MsgHandler, msg []byte) error {
-	var err error
-	err = h.Handle(msg)
-	return err
-}
-
 func (m *WelcomeMessage) Handle(msg []byte) error {
 	var err error
+	var sessionId string
 	err = json.Unmarshal(msg, m)
-	log.Infof("Session id: %v", m.Payload.Session.Id)
-	subscribe(m.Payload.Session.Id)
+	sessionId = m.Payload.Session.Id
+	log.Infof("Extracted session id: %v", sessionId)
+	subscribe(sessionId)
 	return err
 }
 
 func (m *NotificationMessage) Handle(msg []byte) error {
 	var err error
 	err = json.Unmarshal(msg, m)
-	logChatMessage(m.Payload.Event)
+	log.Info(m.Payload.Event.Message.Text)
 	return err
 }
 
 func HandleMessage(msg []byte) error {
-	var message BaseMessage
 	var err error
-	err = json.Unmarshal(msg, &message)
-	var handler MsgHandler
-	switch message.Metadata.MessageType {
+	var msgType string
+	msgType, err = getMessageType(msg)
+	switch msgType {
 	case "session_welcome":
-		handler = &WelcomeMessage{}
+		var welcomeMessage WelcomeMessage
+		err = welcomeMessage.Handle(msg)
 	case "notification":
-		handler = &NotificationMessage{}
-	default:
-		return err
+		var notificationMessage NotificationMessage
+		err = notificationMessage.Handle(msg)
 	}
-	return handler.Handle(msg)
+	return err
 }

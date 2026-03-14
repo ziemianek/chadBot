@@ -20,6 +20,7 @@ func main() {
 		var readMessageErr error
 		_, msg, readMessageErr = client.Conn.ReadMessage()
 		check(readMessageErr)
+		log.Debug(string(msg))
 		twitch.HandleMessage(msg)
 	}
 }

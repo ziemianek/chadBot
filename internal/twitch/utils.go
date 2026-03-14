@@ -10,26 +10,40 @@ import (
 	"os"
 )
 
-func SendPOST(url string, content content, headers headers) (*http.Response, error) {
-	body, err := json.Marshal(content)
+func SendPOST(url string, content content, headers map[string]string) (*http.Response, error) {
+	var err error
+	var body []byte
+	var request *http.Request
+	body, err = json.Marshal(content)
 	if err != nil {
-		log.Error(err)
 		return nil, err
 	}
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+	request, err = http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
-		log.Error(err)
 		return nil, err
 	}
 	for k, v := range headers {
-		req.Header.Set(k, v)
+		request.Header.Set(k, v)
 	}
-	return http.DefaultClient.Do(req)
+	return http.DefaultClient.Do(request)
 }
 
-func subscribe(sessionId string) {
+func getMessageType(msg []byte) (string, error) {
+	var err error
+	var envelope struct {
+		Metadata struct {
+			MessageType string `json:"message_type"`
+		} `json:"metadata"`
+	}
+	err = json.Unmarshal(msg, &envelope)
+	return envelope.Metadata.MessageType, err
+}
+
+func subscribe(sessionId string) error {
+	var err error
+	var response *http.Response
 	var url string = "https://api.twitch.tv/helix/eventsub/subscriptions"
-	var headers headers = headers{
+	var headers map[string]string = map[string]string{
 		"Authorization": "Bearer " + os.Getenv("ACCESS_TOKEN"),
 		"Client-Id":     os.Getenv("CLIENT_ID"),
 		"Content-Type":  "application/json",
@@ -46,18 +60,15 @@ func subscribe(sessionId string) {
 			SessionId: sessionId,
 		},
 	}
-	res, err := SendPOST(url, content, headers)
+	response, err = SendPOST(url, content, headers)
 	if err != nil {
 		log.Error(err)
 	}
-	if res.StatusCode == http.StatusAccepted {
+	if response.StatusCode == http.StatusAccepted {
 		log.Info("Successfully subscribed to chat")
 	} else {
-		out, _ := io.ReadAll(res.Body)
+		out, _ := io.ReadAll(response.Body)
 		log.Errorf("Could not authorize: %v", string(out))
 	}
-}
-
-func logChatMessage(event Event) {
-	log.Infof("[%v]: %v", event.ChatterUserName, event.Message.Text)
+	return err
 }
