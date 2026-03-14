@@ -15,12 +15,19 @@ func main() {
 	var clientConnErr error
 	clientConnErr = client.Connect()
 	check(clientConnErr)
+
+	msgChan := make(chan string)
+	go func() {
+		for {
+			var msg []byte
+			var readMessageErr error
+			_, msg, readMessageErr = client.Conn.ReadMessage()
+			check(readMessageErr)
+			log.Debug(string(msg))
+			twitch.HandleMessage(msgChan, msg)
+		}
+	}()
 	for {
-		var msg []byte
-		var readMessageErr error
-		_, msg, readMessageErr = client.Conn.ReadMessage()
-		check(readMessageErr)
-		log.Debug(string(msg))
-		twitch.HandleMessage(msg)
+		log.Infof("Got new chat message: %v", <-msgChan)
 	}
 }
