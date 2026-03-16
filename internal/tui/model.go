@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/log"
 	"github.com/gorilla/websocket"
 	"github.com/ziemianek/chadbot/internal/twitch"
 )
@@ -28,12 +29,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case twitch.ChatMsg:
 		m.messages = append(m.messages, msg)
-		return m, nil
+		log.Info(m.messages)
+		// return m, nil
 	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
 			//TODO: properly handle connection closing
-			m.conn.Close()
+			// m.conn.Close()
 			return m, tea.Quit
 		}
 	}

@@ -36,10 +36,10 @@ func StartApp() {
 			check(readMessageErr)
 			log.Debug(string(msg))
 			twitch.HandleMessage(msgChan, msg)
+			log.Infof("Got new chat message: %v", <-msgChan)
 		}
 	}()
 	for {
-		log.Infof("Got new chat message: %v", <-msgChan)
 		twitch.ReadChatMsg(msgChan)
 	}
 }

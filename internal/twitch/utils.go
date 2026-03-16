@@ -75,5 +75,6 @@ func subscribe(sessionId string) error {
 }
 
 func ReadChatMsg(msgChan chan string) tea.Msg {
+	// log.Info(<-msgChan)
 	return ChatMsg(<-msgChan)
 }
