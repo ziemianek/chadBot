@@ -2,6 +2,7 @@ package twitch
 
 import (
 	"bytes"
+	tea "charm.land/bubbletea/v2"
 	"encoding/json"
 	"github.com/charmbracelet/log"
 	_ "github.com/joho/godotenv/autoload"
@@ -62,7 +63,7 @@ func subscribe(sessionId string) error {
 	}
 	response, err = SendPOST(url, content, headers)
 	if err != nil {
-		log.Error(err)
+		log.Errorf("Got unexpected error: %v", err)
 	}
 	if response.StatusCode == http.StatusAccepted {
 		log.Info("Successfully subscribed to chat")
@@ -71,4 +72,8 @@ func subscribe(sessionId string) error {
 		log.Errorf("Could not authorize: %v", string(out))
 	}
 	return err
+}
+
+func ReadChatMsg(msgChan chan string) tea.Msg {
+	return ChatMsg(<-msgChan)
 }

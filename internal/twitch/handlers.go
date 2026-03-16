@@ -19,7 +19,6 @@ func (m *NotificationMessage) Handle(ch chan string, msg []byte) error {
 	var err error
 	err = json.Unmarshal(msg, m)
 	ch <- m.Payload.Event.Message.Text
-	// log.Info(m.Payload.Event.Message.Text)
 	return err
 }
 

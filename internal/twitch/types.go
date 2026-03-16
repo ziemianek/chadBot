@@ -1,5 +1,7 @@
 package twitch
 
+type ChatMsg string
+
 type WelcomeMessage struct {
 	Payload struct {
 		Session struct {
