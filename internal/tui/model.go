@@ -1,41 +1,49 @@
 package tui
 
 import (
-	"fmt"
-
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/log"
-	"github.com/gorilla/websocket"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/ziemianek/chadbot/internal/twitch"
+	"io"
 )
 
 type model struct {
-	conn     *websocket.Conn
-	messages []twitch.ChatMsg
+	client     twitch.Client
+	messages   []string
+	msgChannel chan string
+	dump       io.Writer // for debugging purposes
 }
 
-func NewModel(conn *websocket.Conn) model {
+func NewModel(client twitch.Client, dump io.Writer) model {
 	return model{
-		conn:     conn,
-		messages: []twitch.ChatMsg{},
+		client:     client,
+		messages:   []string{},
+		msgChannel: make(chan string),
+		dump:       dump,
 	}
 }
 
 func (m model) Init() tea.Cmd {
+	var err error
+	err = m.client.Connect()
+	if err != nil {
+		log.Errorf("Twitch client could not connect: %v", err)
+	}
+	go m.client.Listen(m.msgChannel)
 	return nil
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// for debugging purposes
+	if m.dump != nil {
+		spew.Fdump(m.dump, msg)
+	}
 	switch msg := msg.(type) {
-	case twitch.ChatMsg:
-		m.messages = append(m.messages, msg)
-		log.Info(m.messages)
-		// return m, nil
 	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
 			//TODO: properly handle connection closing
-			// m.conn.Close()
 			return m, tea.Quit
 		}
 	}
@@ -44,8 +52,5 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() tea.View {
 	var s string = "Welcome to ChadBot\n\n"
-	for msg := range m.messages {
-		s += fmt.Sprintf("User wrote message: %v\n", msg)
-	}
 	return tea.NewView(s)
 }
