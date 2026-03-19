@@ -2,6 +2,7 @@ package tui
 
 import (
 	tea "charm.land/bubbletea/v2"
+	"fmt"
 	"github.com/charmbracelet/log"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/ziemianek/chadbot/internal/twitch"
@@ -30,8 +31,34 @@ func (m model) Init() tea.Cmd {
 	if err != nil {
 		log.Errorf("Twitch client could not connect: %v", err)
 	}
-	go m.client.Listen(m.msgChannel)
-	return nil
+	return tea.Batch(
+		m.listenForActivity(),
+		m.waitForActivity(),
+	)
+}
+
+func (m model) listenForActivity() tea.Cmd {
+	return func() tea.Msg {
+		var msg []byte
+		var err error
+		for {
+			_, msg, err = m.client.Conn.ReadMessage()
+			if err != nil {
+				log.Errorf("Twitch client could not read message: %v", err)
+			}
+			twitch.HandleMessage(m.msgChannel, msg)
+		}
+	}
+}
+
+type chatMsg string
+
+func (m model) waitForActivity() tea.Cmd {
+	return func() tea.Msg {
+		var msg string = <-m.msgChannel
+		log.Infof("Received new message from msgChannel: %v", msg)
+		return chatMsg(msg)
+	}
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -40,6 +67,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		spew.Fdump(m.dump, msg)
 	}
 	switch msg := msg.(type) {
+	case chatMsg:
+		m.messages = append(m.messages, string(msg))
+		log.Infof("Added message to message history. Total messages: %v", len(m.messages))
+		return m, m.waitForActivity()
 	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
@@ -52,5 +83,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() tea.View {
 	var s string = "Welcome to ChadBot\n\n"
+	for _, msg := range m.messages {
+		s += fmt.Sprintf("[ts] [username]: %v\n", msg)
+	}
 	return tea.NewView(s)
 }

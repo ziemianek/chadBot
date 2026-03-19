@@ -21,9 +21,9 @@ func (c *Client) Connect() error {
 }
 
 func (c Client) Listen(msgChan chan string) {
+	var msg []byte
+	var err error
 	for {
-		var msg []byte
-		var err error
 		_, msg, err = c.Conn.ReadMessage()
 		if err != nil {
 			log.Errorf("Twitch client could not read message: %v", err)
