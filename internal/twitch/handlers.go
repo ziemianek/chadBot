@@ -15,14 +15,15 @@ func (m *WelcomeMessage) Handle(msg []byte) error {
 	return err
 }
 
-func (m *NotificationMessage) Handle(msg []byte) error {
+func (m *NotificationMessage) Handle(ch chan string, msg []byte) error {
 	var err error
 	err = json.Unmarshal(msg, m)
-	// log.Info(m.Payload.Event.Message.Text)
+	ch <- m.Payload.Event.Message.Text
+	log.Infof("Sent new message: [%v] to message channel", m.Payload.Event.Message.Text)
 	return err
 }
 
-func HandleMessage(msg []byte) error {
+func HandleMessage(ch chan string, msg []byte) error {
 	var err error
 	var msgType string
 	msgType, err = getMessageType(msg)
@@ -32,7 +33,7 @@ func HandleMessage(msg []byte) error {
 		err = welcomeMessage.Handle(msg)
 	case "notification":
 		var notificationMessage NotificationMessage
-		err = notificationMessage.Handle(msg)
+		err = notificationMessage.Handle(ch, msg)
 	}
 	return err
 }

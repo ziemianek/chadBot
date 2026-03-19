@@ -4,6 +4,7 @@ go = "latest"
 [tasks.build]
 description = "Build application"
 run = """
+rm -f log.txt messages.log
 go build -o build/chadbot ./cmd/chadbot
 chmod +x ./build/chadbot
 """

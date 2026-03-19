@@ -62,7 +62,7 @@ func subscribe(sessionId string) error {
 	}
 	response, err = SendPOST(url, content, headers)
 	if err != nil {
-		log.Error(err)
+		log.Errorf("Got unexpected error: %v", err)
 	}
 	if response.StatusCode == http.StatusAccepted {
 		log.Info("Successfully subscribed to chat")
