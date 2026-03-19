@@ -1,7 +1,5 @@
 package twitch
 
-type ChatMsg string
-
 type WelcomeMessage struct {
 	Payload struct {
 		Session struct {
@@ -16,6 +14,9 @@ type WelcomeMessage struct {
 }
 
 type NotificationMessage struct {
+	Metadata struct {
+		MsgTimestamp string `json:"message_timestamp"`
+	} `json:"metadata"`
 	Payload struct {
 		Event struct {
 			ChatterUserName string `json:"chatter_user_name"`

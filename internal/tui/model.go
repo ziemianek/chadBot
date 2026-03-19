@@ -84,7 +84,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m model) View() tea.View {
 	var s string = "Welcome to ChadBot\n\n"
 	for _, msg := range m.messages {
-		s += fmt.Sprintf("[ts] [username]: %v\n", msg)
+		s += fmt.Sprintf("%v\n", msg)
 	}
 	return tea.NewView(s)
 }
