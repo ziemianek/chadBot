@@ -43,7 +43,7 @@ func NewModel(client *twitch.Client, dump io.Writer) model {
 
 func (m model) Init() tea.Cmd {
 	var err error
-	err = m.client.Connect("wss://eventsub.wss.twitch.tv/ws")
+	err = m.client.Connect()
 	if err != nil {
 		log.Errorf("Twitch client could not connect: %v", err)
 	}
@@ -58,11 +58,11 @@ func (m model) listenForActivity() tea.Cmd {
 		var msg []byte
 		var err error
 		for {
-			_, msg, err = m.client.Conn.ReadMessage()
+			msg, err = m.client.ReadMessage()
 			if err != nil {
 				log.Errorf("Twitch client could not read message: %v", err)
 			}
-			twitch.HandleMessage(m.msgChannel, msg)
+			m.client.HandleMessage(m.msgChannel, msg)
 		}
 	}
 }

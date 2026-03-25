@@ -24,6 +24,16 @@ type welcomeMessage struct {
 	} `json:"payload"`
 }
 
+func (m *welcomeMessage) handle(msg []byte) error {
+	var err error
+	var sessionId string
+	err = json.Unmarshal(msg, m)
+	sessionId = m.Payload.Session.Id
+	log.Infof("Extracted session id: %v", sessionId)
+	subscribe(sessionId)
+	return err
+}
+
 type notificationMessage struct {
 	Metadata struct {
 		MsgTimestamp string `json:"message_timestamp"`
@@ -38,16 +48,6 @@ type notificationMessage struct {
 	} `json:"payload"`
 }
 
-func (m *welcomeMessage) handle(msg []byte) error {
-	var err error
-	var sessionId string
-	err = json.Unmarshal(msg, m)
-	sessionId = m.Payload.Session.Id
-	log.Infof("Extracted session id: %v", sessionId)
-	subscribe(sessionId)
-	return err
-}
-
 func (m *notificationMessage) handle(ch chan string, msg []byte) error {
 	var err error
 	err = json.Unmarshal(msg, m)
@@ -59,21 +59,6 @@ func (m *notificationMessage) handle(ch chan string, msg []byte) error {
 		m.Payload.Event.Message.Text,
 	)
 	log.Infof("Sent new message: \"%v\" to message channel", m.Payload.Event.Message.Text)
-	return err
-}
-
-func HandleMessage(ch chan string, msg []byte) error {
-	var err error
-	var msgType string
-	msgType, err = getMessageType(msg)
-	switch msgType {
-	case "session_welcome":
-		var welcomeMessage welcomeMessage
-		err = welcomeMessage.handle(msg)
-	case "notification":
-		var notificationMessage notificationMessage
-		err = notificationMessage.handle(ch, msg)
-	}
 	return err
 }
 
