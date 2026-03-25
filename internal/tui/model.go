@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"io"
 	"strings"
 
@@ -84,7 +85,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.dump != nil {
 		spew.Fdump(m.dump, msg)
 	}
-
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 	switch msg := msg.(type) {
@@ -98,6 +98,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			//TODO: properly handle connection closing
 			return m, tea.Quit
 		case "enter":
+			//TODO: apply some styling
+			m.messages = append(m.messages, fmt.Sprintf("You: %v", m.textarea.Value()))
 			m.textarea.Reset()
 			return m, nil
 		default:
