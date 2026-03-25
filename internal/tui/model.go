@@ -143,7 +143,12 @@ func (m model) View() tea.View {
 		c = m.textarea.Cursor()
 		// Set the y offset of the cursor based on the position of the textarea
 		// in the application.
-		offset := lipgloss.Height(m.headerView() + "\n")
+		var offset int
+		if len(m.messages) == 0 {
+			offset = lipgloss.Height(m.headerView() + "\n")
+		} else {
+			offset = lipgloss.Height(m.headerView() + strings.Repeat("\n", len(m.messages)))
+		}
 		c.Y += offset
 	}
 
