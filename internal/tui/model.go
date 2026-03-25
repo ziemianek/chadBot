@@ -1,11 +1,12 @@
 package tui
 
 import (
-	"fmt"
 	"io"
+	"strings"
 
 	"charm.land/bubbles/v2/textarea"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/log"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/ziemianek/chadbot/internal/twitch"
@@ -26,11 +27,11 @@ type model struct {
 
 func NewModel(client *twitch.Client, dump io.Writer) model {
 	var ta textarea.Model = textarea.New()
-	ta.Placeholder = "Once upon a time..."
+	ta.Placeholder = "/help to list all available commands"
 	ta.SetVirtualCursor(false)
-	ta.SetStyles(textarea.DefaultStyles(true)) // default to dark styles.
+	ta.ShowLineNumbers = false
 	ta.Focus()
-
+	ta.SetHeight(1)
 	return model{
 		client:     client,
 		messages:   []string{},
@@ -50,6 +51,7 @@ func (m model) Init() tea.Cmd {
 	return tea.Batch(
 		m.listenForActivity(),
 		m.waitForActivity(),
+		textarea.Blink,
 	)
 }
 
@@ -82,6 +84,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.dump != nil {
 		spew.Fdump(m.dump, msg)
 	}
+
+	var cmd tea.Cmd
+	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case chatMsg:
 		m.messages = append(m.messages, string(msg))
@@ -92,21 +97,62 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			//TODO: properly handle connection closing
 			return m, tea.Quit
+		case "enter":
+			m.textarea.Reset()
+			return m, nil
+		default:
+			if !m.textarea.Focused() {
+				cmd = m.textarea.Focus()
+				cmds = append(cmds, cmd)
+			}
 		}
 	case tea.WindowSizeMsg:
 		m.textarea.SetWidth(msg.Width)
 	}
-	return m, nil
+
+	m.textarea, cmd = m.textarea.Update(msg)
+	cmds = append(cmds, cmd)
+	return m, tea.Batch(cmds...)
+
+}
+
+// TODO: APPLY SOME STYLING
+func (m model) headerView() string {
+	return `
+           )         (              )          
+   (    ( /(   (     )\ )    (   ( /(   *   )  
+   )\   )\())  )\   (()/(  ( )\  )\()) )  /(  
+ (((_) ((_)\((((_)(  /(_)) )((_)((_)\  ( )(_)) 
+ )\___  _((_))\ _ )\(_))_ ((_)_   ((_)(_(_())  
+((/ __|| || |(_)_\(_)|   \ | _ ) / _ \|_   _|  
+ | (__ | __ | / _ \  | |) || _ \| (_) | | |    
+  \___||_||_|/_/ \_\ |___/ |___/ \___/  |_|
+`
+}
+
+// TODO: make this red or something
+func (m model) footerView() string {
+	return "Press crtl+c to quit."
 }
 
 func (m model) View() tea.View {
-	var v tea.View
-	//TODO: make this header nicer
-	var s string = "Welcome to ChadBot\n\n"
-	for _, msg := range m.messages {
-		s += fmt.Sprintf("%v\n", msg)
+	var c *tea.Cursor
+	if !m.textarea.VirtualCursor() {
+		c = m.textarea.Cursor()
+		// Set the y offset of the cursor based on the position of the textarea
+		// in the application.
+		offset := lipgloss.Height(m.headerView() + "\n")
+		c.Y += offset
 	}
-	v = tea.NewView(s)
+
+	var s string = strings.Join([]string{
+		m.headerView(),
+		strings.Join(m.messages, "\n"),
+		m.textarea.View(),
+		m.footerView()}, "\n",
+	)
+	var v tea.View = tea.NewView(s)
 	v.AltScreen = true
+	v.Cursor = c
 	return v
 }
