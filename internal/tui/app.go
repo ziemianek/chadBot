@@ -1,29 +1,46 @@
 package tui
 
 import (
+	"os"
+
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/log"
 	"github.com/ziemianek/chadbot/internal/twitch"
-	"os"
 )
 
-func StartApp() {
-	// for debugging purposes
-	var dump *os.File
-	var err error
-	dump, err = os.OpenFile("messages.log", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
-	if err != nil {
-		os.Exit(1)
-	}
-	f, _ := os.OpenFile("log.txt", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o644)
-	log.SetOutput(f)
-	log.SetFormatter(log.JSONFormatter) // Use JSON format
-	// ----
+type App struct {
+	logFile *os.File
+	msgFile *os.File
+}
 
-	var model tea.Model = NewModel(twitch.Client{}, dump)
+func NewApp(debug bool) *App {
+	logFile, err := os.OpenFile("build/log.txt", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
+	if err != nil {
+		log.Errorf("Got error while creating log file: %v", err)
+	}
+	log.SetOutput(logFile)
+	log.SetFormatter(log.JSONFormatter)
+	if debug {
+		log.SetLevel(log.DebugLevel)
+	}
+
+	msgFile, err := os.OpenFile("build/messages.log", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
+	if err != nil {
+		log.Errorf("Got error while creating bubbletea messages history file: %v", err)
+	}
+
+	return &App{
+		logFile: logFile,
+		msgFile: msgFile,
+	}
+}
+
+func (a App) Run() error {
+	var client *twitch.Client = twitch.NewClient()
+	var model tea.Model = NewModel(client, a.msgFile)
 	var p *tea.Program = tea.NewProgram(model)
 	if _, err := p.Run(); err != nil {
-		log.Errorf("Could not start the app: %v", err)
-		os.Exit(1)
+		return err
 	}
+	return nil
 }

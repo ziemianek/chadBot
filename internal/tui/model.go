@@ -1,33 +1,49 @@
 package tui
 
 import (
-	tea "charm.land/bubbletea/v2"
 	"fmt"
+	"io"
+
+	"charm.land/bubbles/v2/textarea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/log"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/ziemianek/chadbot/internal/twitch"
-	"io"
 )
 
 type model struct {
-	client     twitch.Client
+	client     *twitch.Client
 	messages   []string
 	msgChannel chan string
-	dump       io.Writer // for debugging purposes
+
+	// for debugging purposes
+	dump io.Writer
+
+	// message input
+	// viewport viewport.Model
+	textarea textarea.Model
 }
 
-func NewModel(client twitch.Client, dump io.Writer) model {
+func NewModel(client *twitch.Client, dump io.Writer) model {
+	var ta textarea.Model = textarea.New()
+	ta.Placeholder = "Once upon a time..."
+	ta.SetVirtualCursor(false)
+	ta.SetStyles(textarea.DefaultStyles(true)) // default to dark styles.
+	ta.Focus()
+
 	return model{
 		client:     client,
 		messages:   []string{},
 		msgChannel: make(chan string),
 		dump:       dump,
+		// viewport:   vp,
+		textarea: ta,
 	}
 }
 
 func (m model) Init() tea.Cmd {
 	var err error
-	err = m.client.Connect()
+	err = m.client.Connect("wss://eventsub.wss.twitch.tv/ws")
 	if err != nil {
 		log.Errorf("Twitch client could not connect: %v", err)
 	}
@@ -77,12 +93,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			//TODO: properly handle connection closing
 			return m, tea.Quit
 		}
+	case tea.WindowSizeMsg:
+		m.textarea.SetWidth(msg.Width)
 	}
 	return m, nil
 }
 
 func (m model) View() tea.View {
 	var v tea.View
+	//TODO: make this header nicer
 	var s string = "Welcome to ChadBot\n\n"
 	for _, msg := range m.messages {
 		s += fmt.Sprintf("%v\n", msg)

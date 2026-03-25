@@ -3,12 +3,42 @@ package twitch
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
 	"time"
 
 	"github.com/charmbracelet/log"
 )
 
-func (m *WelcomeMessage) Handle(msg []byte) error {
+type welcomeMessage struct {
+	Payload struct {
+		Session struct {
+			Id                  string `json:"id"`
+			Status              string `json:"status"`
+			ConnectedAt         string `json:"connected_at"`
+			KeepaliveTimeoutSec int    `json:"keepalive_timeout_seconds"`
+			ReconnectUrl        string `json:"reconnect_url"`
+			RecoveryUrl         string `json:"recovery_url"`
+		} `json:"session"`
+	} `json:"payload"`
+}
+
+type notificationMessage struct {
+	Metadata struct {
+		MsgTimestamp string `json:"message_timestamp"`
+	} `json:"metadata"`
+	Payload struct {
+		Event struct {
+			ChatterUserName string `json:"chatter_user_name"`
+			Message         struct {
+				Text string `json:"text"`
+			} `json:"message"`
+		} `json:"event"`
+	} `json:"payload"`
+}
+
+func (m *welcomeMessage) handle(msg []byte) error {
 	var err error
 	var sessionId string
 	err = json.Unmarshal(msg, m)
@@ -18,18 +48,77 @@ func (m *WelcomeMessage) Handle(msg []byte) error {
 	return err
 }
 
-func (m *NotificationMessage) Handle(ch chan string, msg []byte) error {
+func (m *notificationMessage) handle(ch chan string, msg []byte) error {
 	var err error
 	err = json.Unmarshal(msg, m)
-	// TODO: should be at debug level
-	log.Infof("Parsing notification message: %v", string(msg))
+	log.Debugf("Parsing notification message: %v", string(msg))
 	// TODO: refactor this maybe?
 	ch <- fmt.Sprintf("[%v] - [%v]: %v",
 		parseTimestamp(m.Metadata.MsgTimestamp),
 		m.Payload.Event.ChatterUserName,
 		m.Payload.Event.Message.Text,
 	)
-	log.Infof("Sent new message: [%v] to message channel", m.Payload.Event.Message.Text)
+	log.Infof("Sent new message: \"%v\" to message channel", m.Payload.Event.Message.Text)
+	return err
+}
+
+func HandleMessage(ch chan string, msg []byte) error {
+	var err error
+	var msgType string
+	msgType, err = getMessageType(msg)
+	switch msgType {
+	case "session_welcome":
+		var welcomeMessage welcomeMessage
+		err = welcomeMessage.handle(msg)
+	case "notification":
+		var notificationMessage notificationMessage
+		err = notificationMessage.handle(ch, msg)
+	}
+	return err
+}
+
+func getMessageType(msg []byte) (string, error) {
+	var err error
+	var envelope struct {
+		Metadata struct {
+			MessageType string `json:"message_type"`
+		} `json:"metadata"`
+	}
+	err = json.Unmarshal(msg, &envelope)
+	return envelope.Metadata.MessageType, err
+}
+
+func subscribe(sessionId string) error {
+	var err error
+	var response *http.Response
+	var url string = "https://api.twitch.tv/helix/eventsub/subscriptions"
+	var headers map[string]string = map[string]string{
+		"Authorization": "Bearer " + os.Getenv("ACCESS_TOKEN"),
+		"Client-Id":     os.Getenv("CLIENT_ID"),
+		"Content-Type":  "application/json",
+	}
+	var content content = content{
+		Type:    "channel.chat.message",
+		Version: "1",
+		Condition: condition{
+			BroadcasterUserId: "482260799", //TODO: get broadcaster id from code
+			UserId:            "482260799", // WHY THE SAME???
+		},
+		Transport: transport{
+			Method:    "websocket",
+			SessionId: sessionId,
+		},
+	}
+	response, err = SendPOST(url, content, headers)
+	if err != nil {
+		log.Errorf("Got unexpected error: %v", err)
+	}
+	if response.StatusCode == http.StatusAccepted {
+		log.Info("Successfully subscribed to chat")
+	} else {
+		out, _ := io.ReadAll(response.Body)
+		log.Errorf("Could not authorize: %v", string(out))
+	}
 	return err
 }
 
@@ -42,19 +131,4 @@ func parseTimestamp(ts string) string {
 		return ""
 	}
 	return t.Format("15:04:05")
-}
-
-func HandleMessage(ch chan string, msg []byte) error {
-	var err error
-	var msgType string
-	msgType, err = getMessageType(msg)
-	switch msgType {
-	case "session_welcome":
-		var welcomeMessage WelcomeMessage
-		err = welcomeMessage.Handle(msg)
-	case "notification":
-		var notificationMessage NotificationMessage
-		err = notificationMessage.Handle(ch, msg)
-	}
-	return err
 }
