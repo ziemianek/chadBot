@@ -9,9 +9,9 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 )
 
-type headers map[string]string
+type RequestHeaders map[string]string
 
-func callAPI(method, url string, headers headers, body []byte) (*http.Response, error) {
+func callAPI(method, url string, headers RequestHeaders, body []byte) (*http.Response, error) {
 	if !(method == http.MethodGet || method == http.MethodPost) {
 		return &http.Response{},
 			errors.New("Invalid HTTP method. Use http.MethodGet or http.MethodPost")
@@ -39,6 +39,6 @@ func SendGet(url string) (*http.Response, error) {
 	return callAPI(http.MethodGet, url, nil, nil)
 }
 
-func SendPost(url string, headers headers, body []byte) (*http.Response, error) {
+func SendPost(url string, headers RequestHeaders, body []byte) (*http.Response, error) {
 	return callAPI(http.MethodPost, url, headers, body)
 }

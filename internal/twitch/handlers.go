@@ -90,7 +90,7 @@ func subscribe(sessionId string) error {
 	var err error
 	var resp *http.Response
 	//TODO: if all post requests get this, then move to callAPI method
-	var headers headers = headers{"Content-Type": "application/json"}
+	var headers RequestHeaders = RequestHeaders{"Content-Type": "application/json"}
 	var broadcasterID string = getBroadcasterUserID()
 	var body []byte
 	body, err = json.Marshal(payloadSubscribeToChat{
