@@ -10,6 +10,19 @@ import (
 	"github.com/charmbracelet/log"
 )
 
+type payloadSubscribeToChat struct {
+	Type      string `json:"type"`
+	Version   string `json:"version"`
+	Condition struct {
+		BroadcasterUserId string `json:"broadcaster_user_id"`
+		UserId            string `json:"user_id"`
+	} `json:"condition"`
+	Transport struct {
+		Method    string `json:"method"`
+		SessionId string `json:"session_id"`
+	} `json:"transport"`
+}
+
 type welcomeMessage struct {
 	Payload struct {
 		Session struct {
@@ -99,6 +112,9 @@ func subscribe(sessionId string) error {
 		},
 	})
 	resp, err = SendPost(url, headers, body)
+	if err != nil {
+		return err
+	}
 	if resp.StatusCode == http.StatusAccepted {
 		log.Info("Successfully subscribed to chat")
 	} else {
@@ -106,7 +122,7 @@ func subscribe(sessionId string) error {
 		out, _ := io.ReadAll(resp.Body)
 		log.Errorf("Could not authorize: %v", string(out))
 	}
-	return err
+	return nil
 }
 
 func parseTimestamp(ts string) string {
@@ -141,6 +157,12 @@ func getBroadcasterUserID() string {
 		log.Errorf("Could not unmarshal response: %v", err)
 		return ""
 	}
-	log.Infof("Extracted Broadcaster User ID: %v", respBody.Data[0].ID)
-	return respBody.Data[0].ID
+	// SAFETY CHECK: Ensure we actually got data back before accessing index 0
+	if len(respBody.Data) == 0 {
+		log.Errorf("Twitch returned 0 users for this token. Check your credentials.")
+		return ""
+	}
+	var id string = respBody.Data[0].ID
+	log.Infof("Extracted Broadcaster User ID: %s", id)
+	return id
 }

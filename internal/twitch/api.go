@@ -5,6 +5,8 @@ import (
 	"errors"
 	"net/http"
 	"os"
+
+	_ "github.com/joho/godotenv/autoload"
 )
 
 type headers map[string]string
@@ -22,6 +24,7 @@ func callAPI(method, url string, headers headers, body []byte) (*http.Response, 
 		return &http.Response{}, err
 	}
 
+	// TODO: handle case where those are not in env vars
 	req.Header.Set("Authorization", "Bearer "+os.Getenv("ACCESS_TOKEN"))
 	req.Header.Set("Client-Id", os.Getenv("CLIENT_ID"))
 	// add any additional headers
