@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -74,35 +73,37 @@ func getMessageType(msg []byte) (string, error) {
 }
 
 func subscribe(sessionId string) error {
-	var err error
-	var response *http.Response
 	var url string = "https://api.twitch.tv/helix/eventsub/subscriptions"
-	var headers map[string]string = map[string]string{
-		"Authorization": "Bearer " + os.Getenv("ACCESS_TOKEN"),
-		"Client-Id":     os.Getenv("CLIENT_ID"),
-		"Content-Type":  "application/json",
-	}
-	var bID string = getBroadcasterUserID()
-	var content content = content{
+	var err error
+	var resp *http.Response
+	//TODO: if all post requests get this, then move to callAPI method
+	var headers headers = headers{"Content-Type": "application/json"}
+	var broadcasterID string = getBroadcasterUserID()
+	var body []byte
+	body, err = json.Marshal(payloadSubscribeToChat{
 		Type:    "channel.chat.message",
 		Version: "1",
-		Condition: condition{
-			BroadcasterUserId: bID,
-			UserId:            bID,
+		Condition: struct {
+			BroadcasterUserId string `json:"broadcaster_user_id"`
+			UserId            string `json:"user_id"`
+		}{
+			BroadcasterUserId: broadcasterID,
+			UserId:            broadcasterID,
 		},
-		Transport: transport{
+		Transport: struct {
+			Method    string `json:"method"`
+			SessionId string `json:"session_id"`
+		}{
 			Method:    "websocket",
 			SessionId: sessionId,
 		},
-	}
-	response, err = SendPOST(url, content, headers)
-	if err != nil {
-		log.Errorf("Got unexpected error: %v", err)
-	}
-	if response.StatusCode == http.StatusAccepted {
+	})
+	resp, err = SendPost(url, headers, body)
+	if resp.StatusCode == http.StatusAccepted {
 		log.Info("Successfully subscribed to chat")
 	} else {
-		out, _ := io.ReadAll(response.Body)
+		// TODO: make this more efficient by streaming data?
+		out, _ := io.ReadAll(resp.Body)
 		log.Errorf("Could not authorize: %v", string(out))
 	}
 	return err
@@ -120,22 +121,10 @@ func parseTimestamp(ts string) string {
 }
 
 func getBroadcasterUserID() string {
-	var err error
-	var request *http.Request
 	var url string = "https://api.twitch.tv/helix/users"
-	request, err = http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return ""
-	}
-	var headers map[string]string = map[string]string{
-		"Authorization": "Bearer " + os.Getenv("ACCESS_TOKEN"),
-		"Client-Id":     os.Getenv("CLIENT_ID"),
-	}
-	for k, v := range headers {
-		request.Header.Set(k, v)
-	}
-	var response *http.Response
-	response, err = http.DefaultClient.Do(request)
+	var err error
+	var resp *http.Response
+	resp, err = SendGet(url)
 	if err != nil {
 		log.Errorf("Could not send request: %v", err)
 		return ""
@@ -147,7 +136,7 @@ func getBroadcasterUserID() string {
 	}
 	// stream data directly to struct
 	// more efficient than io.ReadAll + json.Unmarshal
-	err = json.NewDecoder(response.Body).Decode(&respBody)
+	err = json.NewDecoder(resp.Body).Decode(&respBody)
 	if err != nil {
 		log.Errorf("Could not unmarshal response: %v", err)
 		return ""
