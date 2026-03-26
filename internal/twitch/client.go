@@ -7,7 +7,8 @@ import (
 )
 
 type Client struct {
-	conn     *websocket.Conn
+	conn *websocket.Conn
+	// TODO: is response needed?
 	response *http.Response
 }
 

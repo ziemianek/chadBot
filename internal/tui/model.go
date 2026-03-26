@@ -138,12 +138,14 @@ func (m model) footerView() string {
 }
 
 func (m model) View() tea.View {
+	var v tea.View
 	var c *tea.Cursor
+	var s string
+	var offset int
 	if !m.textarea.VirtualCursor() {
 		c = m.textarea.Cursor()
 		// Set the y offset of the cursor based on the position of the textarea
 		// in the application.
-		var offset int
 		if len(m.messages) == 0 {
 			offset = lipgloss.Height(m.headerView() + "\n")
 		} else {
@@ -152,13 +154,13 @@ func (m model) View() tea.View {
 		c.Y += offset
 	}
 
-	var s string = strings.Join([]string{
+	s = strings.Join([]string{
 		m.headerView(),
 		strings.Join(m.messages, "\n"),
 		m.textarea.View(),
 		m.footerView()}, "\n",
 	)
-	var v tea.View = tea.NewView(s)
+	v = tea.NewView(s)
 	v.AltScreen = true
 	v.Cursor = c
 	return v

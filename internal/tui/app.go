@@ -40,6 +40,7 @@ func (a App) Run() error {
 	var model tea.Model = NewModel(client, a.msgFile)
 	var p *tea.Program = tea.NewProgram(model)
 	if _, err := p.Run(); err != nil {
+		log.Errorf("Error while running tea program: %v", err)
 		return err
 	}
 	return nil
