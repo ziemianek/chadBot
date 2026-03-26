@@ -82,12 +82,13 @@ func subscribe(sessionId string) error {
 		"Client-Id":     os.Getenv("CLIENT_ID"),
 		"Content-Type":  "application/json",
 	}
+	var bID string = getBroadcasterUserID()
 	var content content = content{
 		Type:    "channel.chat.message",
 		Version: "1",
 		Condition: condition{
-			BroadcasterUserId: "482260799", //TODO: get broadcaster id from code
-			UserId:            "482260799", // WHY THE SAME???
+			BroadcasterUserId: bID,
+			UserId:            bID,
 		},
 		Transport: transport{
 			Method:    "websocket",
@@ -116,4 +117,41 @@ func parseTimestamp(ts string) string {
 		return ""
 	}
 	return t.Format("15:04:05")
+}
+
+func getBroadcasterUserID() string {
+	var err error
+	var request *http.Request
+	var url string = "https://api.twitch.tv/helix/users"
+	request, err = http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return ""
+	}
+	var headers map[string]string = map[string]string{
+		"Authorization": "Bearer " + os.Getenv("ACCESS_TOKEN"),
+		"Client-Id":     os.Getenv("CLIENT_ID"),
+	}
+	for k, v := range headers {
+		request.Header.Set(k, v)
+	}
+	var response *http.Response
+	response, err = http.DefaultClient.Do(request)
+	if err != nil {
+		log.Errorf("Could not send request: %v", err)
+		return ""
+	}
+	var respBody struct {
+		Data []struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	// stream data directly to struct
+	// more efficient than io.ReadAll + json.Unmarshal
+	err = json.NewDecoder(response.Body).Decode(&respBody)
+	if err != nil {
+		log.Errorf("Could not unmarshal response: %v", err)
+		return ""
+	}
+	log.Infof("Extracted Broadcaster User ID: %v", respBody.Data[0].ID)
+	return respBody.Data[0].ID
 }
