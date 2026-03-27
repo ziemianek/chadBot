@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"os"
 
 	tea "charm.land/bubbletea/v2"
@@ -9,11 +10,12 @@ import (
 )
 
 type App struct {
+	client  *twitch.Client
 	logFile *os.File
 	msgFile *os.File
 }
 
-func NewApp(debug bool) *App {
+func NewApp(client *twitch.Client, debug bool) *App {
 	logFile, err := os.OpenFile("build/log.txt", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
 	if err != nil {
 		log.Errorf("Got error while creating log file: %v", err)
@@ -28,21 +30,26 @@ func NewApp(debug bool) *App {
 		log.Errorf("Got error while creating bubbletea messages history file: %v", err)
 	}
 	return &App{
+		client:  client,
 		logFile: logFile,
 		msgFile: msgFile,
 	}
 }
 
 func (a App) Run() error {
-	var client *twitch.Client = twitch.NewClient()
-	if err := client.Login(); err != nil {
-		log.Errorf("Could not authorize to twitch: %v", err)
+	// used so we can cancel the login if the user exists early
+	ctx := context.Background()
+
+	if err := a.client.Login(ctx); err != nil {
+		log.Errorf("Could not authorize to Twitch: %v", err)
 		return err
 	}
-	var model tea.Model = NewModel(client, a.msgFile)
-	var p *tea.Program = tea.NewProgram(model)
+
+	model := NewModel(a.client, a.msgFile)
+	p := tea.NewProgram(model)
+
 	if _, err := p.Run(); err != nil {
-		log.Errorf("Error while running tea program: %v", err)
+		log.Errorf("Could not start tea.Program: %v", err)
 		return err
 	}
 	return nil

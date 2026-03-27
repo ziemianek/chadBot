@@ -22,7 +22,6 @@ type model struct {
 	dump io.Writer
 
 	// message input
-	// viewport viewport.Model
 	textarea textarea.Model
 }
 
@@ -38,15 +37,12 @@ func NewModel(client *twitch.Client, dump io.Writer) model {
 		messages:   []string{},
 		msgChannel: make(chan string),
 		dump:       dump,
-		// viewport:   vp,
-		textarea: ta,
+		textarea:   ta,
 	}
 }
 
 func (m model) Init() tea.Cmd {
-	var err error
-	err = m.client.Connect()
-	if err != nil {
+	if err := m.client.Connect(); err != nil {
 		log.Errorf("Twitch client could not connect: %v", err)
 	}
 	return tea.Batch(
