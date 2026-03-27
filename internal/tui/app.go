@@ -23,12 +23,10 @@ func NewApp(debug bool) *App {
 	if debug {
 		log.SetLevel(log.DebugLevel)
 	}
-
 	msgFile, err := os.OpenFile("build/messages.log", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
 	if err != nil {
 		log.Errorf("Got error while creating bubbletea messages history file: %v", err)
 	}
-
 	return &App{
 		logFile: logFile,
 		msgFile: msgFile,
@@ -37,6 +35,10 @@ func NewApp(debug bool) *App {
 
 func (a App) Run() error {
 	var client *twitch.Client = twitch.NewClient()
+	if err := client.Login(); err != nil {
+		log.Errorf("Could not authorize to twitch: %v", err)
+		return err
+	}
 	var model tea.Model = NewModel(client, a.msgFile)
 	var p *tea.Program = tea.NewProgram(model)
 	if _, err := p.Run(); err != nil {
