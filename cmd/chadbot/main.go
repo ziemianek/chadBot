@@ -9,9 +9,7 @@ import (
 
 func main() {
 	var app *tui.App = tui.NewApp(true)
-	var err error
-	err = app.Run()
-	if err != nil {
+	if err := app.Run(); err != nil {
 		log.Errorf("Could not start the app: %v", err)
 		os.Exit(1)
 	}

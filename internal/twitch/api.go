@@ -11,8 +11,10 @@ import (
 
 type RequestHeaders map[string]string
 
+// TODO: make this twitch Client receiver
 func callAPI(method, url string, headers RequestHeaders, body []byte) (*http.Response, error) {
 	if !(method == http.MethodGet || method == http.MethodPost) {
+		//TODO: use nil???
 		return &http.Response{},
 			errors.New("Invalid HTTP method. Use http.MethodGet or http.MethodPost")
 	}
@@ -24,9 +26,24 @@ func callAPI(method, url string, headers RequestHeaders, body []byte) (*http.Res
 		return &http.Response{}, err
 	}
 
-	// TODO: handle case where those are not in env vars
-	req.Header.Set("Authorization", "Bearer "+os.Getenv("ACCESS_TOKEN"))
-	req.Header.Set("Client-Id", os.Getenv("CLIENT_ID"))
+	var accessToken string
+	var exists bool
+	accessToken, exists = os.LookupEnv("ACCESS_TOKEN")
+	if !exists {
+		//TODO: use nil???
+		return &http.Response{},
+			errors.New("Env var ACCESS_TOKEN is missing")
+	}
+	var clientId string
+	clientId, exists = os.LookupEnv("CLIENT_ID")
+	if !exists {
+		//TODO: use nil???
+		return &http.Response{},
+			errors.New("Env var CLIENT_ID is missing")
+
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Client-Id", clientId)
 	// add any additional headers
 	for k, v := range headers {
 		req.Header.Set(k, v)

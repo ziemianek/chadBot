@@ -74,24 +74,13 @@ func (m *notificationMessage) handle(ch chan string, msg []byte) error {
 	return err
 }
 
-func getMessageType(msg []byte) (string, error) {
-	var err error
-	var envelope struct {
-		Metadata struct {
-			MessageType string `json:"message_type"`
-		} `json:"metadata"`
-	}
-	err = json.Unmarshal(msg, &envelope)
-	return envelope.Metadata.MessageType, err
-}
-
 func subscribe(sessionId string) error {
 	var url string = "https://api.twitch.tv/helix/eventsub/subscriptions"
 	var err error
 	var resp *http.Response
 	//TODO: if all post requests get this, then move to callAPI method
 	var headers RequestHeaders = RequestHeaders{"Content-Type": "application/json"}
-	var broadcasterID string = getBroadcasterUserID()
+	var broadcasterID string = getBroadcasterID()
 	var body []byte
 	body, err = json.Marshal(payloadSubscribeToChat{
 		Type:    "channel.chat.message",
@@ -136,7 +125,7 @@ func parseTimestamp(ts string) string {
 	return t.Format("15:04:05")
 }
 
-func getBroadcasterUserID() string {
+func getBroadcasterID() string {
 	var url string = "https://api.twitch.tv/helix/users"
 	var err error
 	var resp *http.Response
@@ -157,7 +146,6 @@ func getBroadcasterUserID() string {
 		log.Errorf("Could not unmarshal response: %v", err)
 		return ""
 	}
-	// SAFETY CHECK: Ensure we actually got data back before accessing index 0
 	if len(respBody.Data) == 0 {
 		log.Errorf("Twitch returned 0 users for this token. Check your credentials.")
 		return ""
