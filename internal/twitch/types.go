@@ -2,14 +2,6 @@ package twitch
 
 type RequestHeaders map[string]string
 
-// TwitchToken holds the OAuth2 credentials.
-type TwitchToken struct {
-	AccessToken  string   `json:"access_token"`
-	RefreshToken string   `json:"refresh_token"`
-	ExpiresIn    int      `json:"expires_in"`
-	Scope        []string `json:"scope"`
-}
-
 // TwitchUserResponse matches the Helix Users API response.
 type TwitchUserResponse struct {
 	Data []TwitchUser `json:"data"`

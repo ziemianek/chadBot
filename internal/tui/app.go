@@ -37,7 +37,7 @@ func NewApp(client *twitch.Client, debug bool) *App {
 }
 
 func (a App) Run() error {
-	// used so we can cancel the login if the user exists early
+	// used to cancel the login if the user exists early
 	ctx := context.Background()
 
 	if err := a.client.Login(ctx); err != nil {

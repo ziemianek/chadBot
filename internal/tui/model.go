@@ -60,7 +60,9 @@ func (m model) listenForActivity() tea.Cmd {
 			msg, err = m.client.ReadMessage()
 			if err != nil {
 				log.Errorf("Twitch client could not read message: %v", err)
+				return nil
 			}
+			log.Debugf("Got new message: %v", string(msg))
 			m.client.HandleMessage(m.msgChannel, msg)
 		}
 	}

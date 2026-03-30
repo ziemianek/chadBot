@@ -16,5 +16,4 @@ func main() {
 	if err := app.Run(); err != nil {
 		log.Fatal(err)
 	}
-	log.Info("chadbot running!")
 }

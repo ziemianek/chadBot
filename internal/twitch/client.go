@@ -52,13 +52,27 @@ type Client struct {
 }
 
 func (c *Client) Login(ctx context.Context) error {
+	log.Info("Checking if token is present.")
 	if savedToken, err := c.secretsRepo.GetToken(ctx); err == nil {
-		c.accessToken = savedToken
-		// TODO: check if token is expired here and refresh if needed
+		log.Info("Found existing token")
+		log.Info("Checking if token is valid")
+		// check if token is expired here and refresh if needed
+		if !savedToken.isExpired() {
+			log.Info("Token is still valid:)")
+			c.accessToken = savedToken
+			return nil
+		}
+		log.Info("Token has expired. Refreshing...")
+		if err := c.accessToken.refresh(); err != nil {
+			log.Errorf("Couldnt refresh token: %v", err)
+			return err
+		}
+		log.Info("Token successfully refreshed")
 		return nil
 	}
 
 	// if no token, do the browser flow
+	log.Info("Token not found. Generating new token")
 	resChan := make(chan string)
 	srv := startServer(resChan)
 	defer srv.Shutdown(ctx)
@@ -74,6 +88,7 @@ func (c *Client) Login(ctx context.Context) error {
 			return err
 		}
 		c.accessToken = token
+		log.Info("Generated new access token")
 		return c.secretsRepo.SaveToken(ctx, token)
 	}
 }
@@ -136,11 +151,10 @@ func (c *Client) generateToken(code string) (*TwitchToken, error) {
 	}
 	defer resp.Body.Close()
 
-	var t TwitchToken
-	json.NewDecoder(resp.Body).Decode(&t)
-	return &t, nil
+	return NewTwitchToken(resp)
 }
 
+// TODO: delete?
 func (c *Client) callAPI(method, url string, headers RequestHeaders, body []byte) (*http.Response, error) {
 	req, err := http.NewRequest(method, url, bytes.NewReader(body))
 	if err != nil {
@@ -164,10 +178,12 @@ func (c *Client) callAPI(method, url string, headers RequestHeaders, body []byte
 	return http.DefaultClient.Do(req)
 }
 
+// TODO: delete?
 func (c *Client) SendGet(url string) (*http.Response, error) {
 	return c.callAPI(http.MethodGet, url, nil, nil)
 }
 
+// TODO: delete?
 func (c *Client) SendPost(url string, headers RequestHeaders, body []byte) (*http.Response, error) {
 	return c.callAPI(http.MethodPost, url, headers, body)
 }
