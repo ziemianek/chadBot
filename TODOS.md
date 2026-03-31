@@ -7,3 +7,4 @@
     optinally, handle response from WS and remove it from the TUI chat.
 
 - [ ] Fix: there is a bug when token is saved to file, but expired already. Current implementation cant handle this scenario. It leaves open connection unused and eventually program crashes
+ 
