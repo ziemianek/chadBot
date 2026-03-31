@@ -1,5 +1,12 @@
 package twitch
 
+const (
+	TwitchAuthURL    = "https://id.twitch.tv/oauth2/authorize"
+	TwitchTokenURL   = "https://id.twitch.tv/oauth2/token"
+	TwitchEventsubWS = "wss://eventsub.wss.twitch.tv/ws"
+	RedirectURI      = "http://localhost:3000"
+)
+
 type RequestHeaders map[string]string
 
 // TwitchUserResponse matches the Helix Users API response.

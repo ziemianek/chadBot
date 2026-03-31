@@ -21,13 +21,6 @@ import (
 	"github.com/toqueteos/webbrowser"
 )
 
-const (
-	TwitchAuthURL    = "https://id.twitch.tv/oauth2/authorize"
-	TwitchTokenURL   = "https://id.twitch.tv/oauth2/token"
-	TwitchEventsubWS = "wss://eventsub.wss.twitch.tv/ws"
-	RedirectURI      = "http://localhost:3000"
-)
-
 func NewClient(repo SecretsRepository) (*Client, error) {
 	id, secret, err := repo.GetCredentials()
 	if err != nil {
@@ -56,19 +49,20 @@ func (c *Client) Login(ctx context.Context) error {
 	if savedToken, err := c.secretsRepo.GetToken(ctx); err == nil {
 		log.Info("Found existing token")
 		log.Info("Checking if token is valid")
+		c.accessToken = savedToken
 		// check if token is expired here and refresh if needed
 		if !savedToken.isExpired() {
 			log.Info("Token is still valid:)")
-			c.accessToken = savedToken
 			return nil
 		}
 		log.Info("Token has expired. Refreshing...")
-		if err := c.accessToken.refresh(); err != nil {
+		newToken, err := c.accessToken.Refresh(ctx, c.clientID, c.clientSecret)
+		if err != nil {
 			log.Errorf("Couldnt refresh token: %v", err)
 			return err
 		}
 		log.Info("Token successfully refreshed")
-		return nil
+		return c.secretsRepo.SaveToken(ctx, newToken)
 	}
 
 	// if no token, do the browser flow
