@@ -183,7 +183,7 @@ func (c *Client) SendPost(url string, headers RequestHeaders, body []byte) (*htt
 }
 
 func (c *Client) subscribe(sessionId string) error {
-	broadcasterID, err := c.getBroadcasterID()
+	broadcasterID, err := c.GetBroadcasterID()
 	if err != nil {
 		return fmt.Errorf("failed to get broadcaster id: %w", err)
 	}
@@ -217,7 +217,8 @@ func (c *Client) subscribe(sessionId string) error {
 	return nil
 }
 
-func (c *Client) getBroadcasterID() (string, error) {
+// do this in NewClient
+func (c *Client) GetBroadcasterID() (string, error) {
 	resp, err := c.SendGet("https://api.twitch.tv/helix/users")
 	if err != nil {
 		return "", err

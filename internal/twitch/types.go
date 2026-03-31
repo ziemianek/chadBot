@@ -22,6 +22,9 @@ type TwitchUser struct {
 	ProfileImageURL string `json:"profile_image_url"`
 }
 
+// TODO: Implement all this
+// https://dev.twitch.tv/docs/eventsub/websocket-reference/
+
 // EventSub structs for internal processing.
 type welcomeMessage struct {
 	Payload struct {

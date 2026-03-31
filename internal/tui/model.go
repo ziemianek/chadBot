@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -78,6 +80,51 @@ func (m model) waitForActivity() tea.Cmd {
 	}
 }
 
+func (m model) sendOwnerMsg(msg string) error {
+	bID, err := m.client.GetBroadcasterID()
+	if err != nil {
+		return err
+	}
+	payload := struct {
+		BroadcasterID string `json:"broadcaster_id"`
+		SenderID      string `json:"sender_id"`
+		Message       string `json:"message"`
+	}{
+		BroadcasterID: bID,
+		SenderID:      bID,
+		Message:       msg,
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	resp, err := m.client.SendPost("https://api.twitch.tv/helix/chat/messages", nil, body)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	var respBody struct {
+		Data []struct {
+			MessageID string `json:"message_id"`
+			IsSent    bool   `json:"is_sent"`
+		} `json:"data"`
+	}
+	// stream data directly to struct
+	// more efficient than io.ReadAll + json.Unmarshal
+	if err = json.NewDecoder(resp.Body).Decode(&respBody); err != nil {
+		log.Errorf("Could not unmarshal response: %v", err)
+		return err
+	}
+	if !respBody.Data[0].IsSent {
+		err := errors.New("Unexpected error. Could not send the message to the chat")
+		log.Error(err)
+		return err
+	}
+	log.Infof("successfully sent message to the chat and got response: %v", respBody)
+	return nil
+}
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// for debugging purposes
 	if m.dump != nil {
@@ -97,7 +144,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "enter":
 			//TODO: apply some styling
-			m.messages = append(m.messages, fmt.Sprintf("You: %v", m.textarea.Value()))
+			ownerMsg := m.textarea.Value()
+			if err := m.sendOwnerMsg(ownerMsg); err != nil {
+				m.textarea.SetValue("[ERROR]: Cant send this message!")
+			}
+			m.messages = append(m.messages, fmt.Sprintf("You: %v", ownerMsg))
+			// send m.textarea.Value() to some channel
+			// catch message and send post request to twitch api
 			m.textarea.Reset()
 			return m, nil
 		default:
